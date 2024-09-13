@@ -1,4 +1,4 @@
-CC = gcc
+CC = gcc -std=gnu11
 CFLAGS = -Iunity -Iinclude -Wall -Wextra -Werror -g -pthread -fprofile-arcs -ftest-coverage -O0
 OPTIMIZED_FLAGS = -Iinclude -Wall -Wextra -Werror -O2 -s -pthread
 
