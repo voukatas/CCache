@@ -291,11 +291,11 @@ int run_server(int port) {
     struct epoll_event events[MAX_EVENTS];
 
     // Event Loop
-    while (atomic_load(&keep_running)) {
+    while (KEEP_RUNNING_LOAD(keep_running)) {
         int nfds =
             epoll_wait(epoll_fd, events, MAX_EVENTS,
                        -1);  // returns as soon as an event occurs, no delay
-        if (!atomic_load(&keep_running)) {
+        if (!KEEP_RUNNING_LOAD(keep_running)) {
             break;
         }
         if (nfds == -1) {
