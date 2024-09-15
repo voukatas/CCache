@@ -1,8 +1,10 @@
 #include "../include/signal_handler.h"
 
 KEEP_RUNNING_TYPE keep_running = KEEP_RUNNING_INIT;
+// KEEP_RUNNING_STORE(keep_running, KEEP_RUNNING_INIT);
 
 void set_event_loop_state(int state) {  // 0 for stop, 1 for running
+                                        // #warning "TESTING macro is defined"
     KEEP_RUNNING_STORE(keep_running, state);
 }
 

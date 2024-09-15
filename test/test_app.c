@@ -1,3 +1,4 @@
+#include <stdio.h>
 #define TESTING
 // #include "../include/hashtable.h"
 // #include "../include/mock_malloc.h"
@@ -9,77 +10,58 @@
 #include "../include/signal_handler.h"
 #include "../unity/unity.h"
 
-void setUp(void) {}
+void server_delay(unsigned int delay);
+void connect_disconnect_client(int port, char *ip);
 
-void tearDown(void) {}
+// vars
+static const unsigned int WAITING_SERVER_TIMEOUT = 5 * 1000 * 1000;  // 5 sec
+static const unsigned int WAITING_SERVER_INIT = 5 * 1000 * 1000;     // 5 sec
+static const int TEST_PORT = 8080;
+static char *TEST_ADDRESS = "127.0.0.1";
+
+static pthread_t server_thread;
 
 // A small delay for server to start and avoid connection refusals
-void server_init_delay() { usleep(100000); }
+void server_delay(unsigned int delay) { usleep(delay); }
 
-// Test cases
-
-void test_add_and_clean_client(void) {
-    client_node_t *head = NULL;
-    node_data_t *client_data = malloc(sizeof(node_data_t));
-
-    int client_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (client_fd == 0) {
-        perror("Socket failed");
-        exit(EXIT_FAILURE);
+void wait_for_no_active_connections(unsigned int waiting_time) {
+    unsigned int total_time = 0;
+    const unsigned int delay = 100000;  // 100ms
+                                        // atomic_load(&(var))
+    while (get_active_connections() > 0) {
+        usleep(delay);
+        total_time += delay;
+        if (total_time > waiting_time) {
+            perror("Timeout waiting for server to close all the connections\n");
+            exit(EXIT_FAILURE);
+        }
     }
-    client_t *client = malloc(sizeof(client_t));
-    if (!client) {
-        perror("malloc failed");
-        close(client_fd);
-        return;
-    }
-    // printf("Accepted client socket 1\n");
-
-    client->fd = client_fd;
-    client_data->data.client = client;
-    client->read_buffer_len = 0;
-    client->write_buffer_len = 0;
-    client->write_buffer_pos = 0;
-    // close(current->client_data->data.client->fd);
-
-    add_client_to_list(&head, client_data);
-    TEST_ASSERT_NOT_NULL(head);
-    TEST_ASSERT_EQUAL_PTR(head->client_data, client_data);
-
-    cleanup_all_clients(&head);
 }
 
-void test_add_and_remove_client(void) {
-    client_node_t *head = NULL;
-    node_data_t *client_data = malloc(sizeof(node_data_t));
-
-    int client_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (client_fd == 0) {
-        perror("Socket failed");
-        exit(EXIT_FAILURE);
-    }
-    client_t *client = malloc(sizeof(client_t));
-    if (!client) {
-        perror("malloc failed");
-        close(client_fd);
-        return;
-    }
-    // printf("Accepted client socket 1\n");
-
-    client->fd = client_fd;
-    client_data->data.client = client;
-    client->read_buffer_len = 0;
-    client->write_buffer_len = 0;
-    client->write_buffer_pos = 0;
-    // close(current->client_data->data.client->fd);
-
-    add_client_to_list(&head, client_data);
-    TEST_ASSERT_NOT_NULL(head);
-    TEST_ASSERT_EQUAL_PTR(head->client_data, client_data);
-
-    remove_client_from_list(&head, client_data);
-    TEST_ASSERT_NULL(head);
+void shutdown_server(void) {
+    wait_for_no_active_connections(WAITING_SERVER_TIMEOUT);
+    // close the event loop
+    set_event_loop_state(0);
+    perror("send disconnect signal\n");
+    // this is needed so the event loop get in state of checking again if it is
+    // running
+    connect_disconnect_client(TEST_PORT, TEST_ADDRESS);
 }
+
+void wait_for_server_to_start(unsigned int waiting_time) {
+    unsigned int total_time = 0;
+    const unsigned int delay = 100000;  // 100ms
+    while (get_server_state() != SERVER_STATE_RUNNING) {
+        usleep(delay);
+        total_time += delay;
+        if (total_time > waiting_time) {
+            perror("Timeout waiting for server to start running\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void start_server(void) { wait_for_server_to_start(WAITING_SERVER_INIT); }
 
 void *run_server_thread(void *arg) {
     int *port = (int *)arg;
@@ -181,48 +163,32 @@ void send_client_msg_in_new_conn_and_wait_response(char *msg, int port,
     // close(sockfd);
 }
 
-void test_run_server_initialization(void) {
-    set_event_loop_state(1);
-    pthread_t server_thread;
-    int port = 8080;
-
-    char buffer[BUFFER_SIZE];
-
+void setUp(void) {
+    static int port = TEST_PORT;
     pthread_create(&server_thread, NULL, run_server_thread, &port);
+    start_server();
+}
 
-    // Small delay for server to init
-    server_init_delay();
-    send_client_msg_in_new_conn_and_wait_response(
-        "SET test_key test_value 30\r\n", port, "127.0.0.1", buffer);
-    TEST_ASSERT_EQUAL_STRING("OK\r\n", buffer);
-
-    // To shutdown the event loop
-    set_event_loop_state(0);
-    connect_disconnect_client(port, "127.0.0.1");
-
+void tearDown(void) {
+    shutdown_server();
     pthread_join(server_thread, NULL);
 }
 
-// Placeholder, finish this test after the text-based protocol is finished. This
-// covers the branch of code where a node-client from the middle of the linked
-// list is removed
-void test_run_server_multiple_clients(void) {
-    set_event_loop_state(1);
-    pthread_t server_thread;
-    int port = 8080;
-    char *ip = "127.0.0.1";
+// Test cases
+void test_run_server_initialization(void) {
     char buffer[BUFFER_SIZE];
 
-    pthread_create(&server_thread, NULL, run_server_thread, &port);
+    send_client_msg_in_new_conn_and_wait_response(
+        "SET test_key test_value 30\r\n", TEST_PORT, TEST_ADDRESS, buffer);
+    TEST_ASSERT_EQUAL_STRING("OK\r\n", buffer);
+}
 
-    // Small delay for server to init
-    server_init_delay();
+void test_run_server_multiple_clients(void) {
+    char buffer[BUFFER_SIZE];
 
-    // Test scenario
-    connect_client(port, ip);
-    // send_client_msg("Hello from client\n", port, ip);
-    int sockfd2 = connect_client(port, ip);
-    int sockfd3 = connect_client(port, ip);
+    int sockfd1 = connect_client(TEST_PORT, TEST_ADDRESS);
+    int sockfd2 = connect_client(TEST_PORT, TEST_ADDRESS);
+    int sockfd3 = connect_client(TEST_PORT, TEST_ADDRESS);
     // Verify that the num of clients is 3 using some text-based command
     send_client_msg_and_wait_response(sockfd2, "CONNECTIONS\r\n", buffer);
     TEST_ASSERT_EQUAL_STRING("3\r\n", buffer);
@@ -232,27 +198,15 @@ void test_run_server_multiple_clients(void) {
     send_client_msg_and_wait_response(sockfd3, "CONNECTIONS\r\n", buffer);
     TEST_ASSERT_EQUAL_STRING("2\r\n", buffer);
 
-    //   To shutdown the event loop
-    set_event_loop_state(0);
-    connect_disconnect_client(port, "127.0.0.1");
-
-    pthread_join(server_thread, NULL);
+    disconnect_client(sockfd3);
+    disconnect_client(sockfd1);
 }
 
 void test_cache_api(void) {
-    set_event_loop_state(1);
-    pthread_t server_thread;
-    int port = 8080;
-    char *ip = "127.0.0.1";
     char buffer[BUFFER_SIZE];
 
-    pthread_create(&server_thread, NULL, run_server_thread, &port);
-
-    // Small delay for server to init
-    server_init_delay();
-
     // Test scenario
-    int sockfd = connect_client(port, ip);
+    int sockfd = connect_client(TEST_PORT, TEST_ADDRESS);
 
     // Test SET command
     send_client_msg_and_wait_response(sockfd, "SET test_key test_value 30\r\n",
@@ -298,27 +252,12 @@ void test_cache_api(void) {
     TEST_ASSERT_EQUAL_STRING("1\r\n", buffer);
 
     disconnect_client(sockfd);
-
-    //   To shutdown the event loop
-    set_event_loop_state(0);
-    connect_disconnect_client(port, "127.0.0.1");
-
-    pthread_join(server_thread, NULL);
 }
 void test_cache_api_error_command_incomplete(void) {
-    set_event_loop_state(1);
-    pthread_t server_thread;
-    int port = 8080;
-    char *ip = "127.0.0.1";
     char buffer[BUFFER_SIZE];
 
-    pthread_create(&server_thread, NULL, run_server_thread, &port);
-
-    // Small delay for server to init
-    server_init_delay();
-
     // Test scenario
-    int sockfd = connect_client(port, ip);
+    int sockfd = connect_client(TEST_PORT, TEST_ADDRESS);
 
     // Test SET command
     send_client_msg_and_wait_response(
@@ -326,28 +265,12 @@ void test_cache_api_error_command_incomplete(void) {
     TEST_ASSERT_EQUAL_STRING("ERROR: Command incomplete\r\n", buffer);
 
     disconnect_client(sockfd);
-
-    //   To shutdown the event loop
-    set_event_loop_state(0);
-    connect_disconnect_client(port, "127.0.0.1");
-
-    pthread_join(server_thread, NULL);
 }
 
 void test_cache_api_error_command_too_large(void) {
-    set_event_loop_state(1);
-    pthread_t server_thread;
-    int port = 8080;
-    char *ip = "127.0.0.1";
     char buffer[BUFFER_SIZE];
 
-    pthread_create(&server_thread, NULL, run_server_thread, &port);
-
-    // Small delay for server to init
-    server_init_delay();
-
-    // Test scenario
-    int sockfd = connect_client(port, ip);
+    int sockfd = connect_client(TEST_PORT, TEST_ADDRESS);
 
     // Test SET command
     send_client_msg_and_wait_response(
@@ -357,28 +280,12 @@ void test_cache_api_error_command_too_large(void) {
     TEST_ASSERT_EQUAL_STRING("ERROR: Command too large\r\n", buffer);
 
     disconnect_client(sockfd);
-
-    //   To shutdown the event loop
-    set_event_loop_state(0);
-    connect_disconnect_client(port, "127.0.0.1");
-
-    pthread_join(server_thread, NULL);
 }
 
 void test_cache_api_partitioned_msg(void) {
-    set_event_loop_state(1);
-    pthread_t server_thread;
-    int port = 8080;
-    char *ip = "127.0.0.1";
     char buffer[BUFFER_SIZE];
 
-    pthread_create(&server_thread, NULL, run_server_thread, &port);
-
-    // Small delay for server to init
-    server_init_delay();
-
-    // Test scenario
-    int sockfd = connect_client(port, ip);
+    int sockfd = connect_client(TEST_PORT, TEST_ADDRESS);
 
     // Test SET command
     send_client_msg(sockfd, "SET test_key1 a_very_lon");
@@ -386,27 +293,11 @@ void test_cache_api_partitioned_msg(void) {
     TEST_ASSERT_EQUAL_STRING("OK\r\n", buffer);
 
     disconnect_client(sockfd);
-
-    //   To shutdown the event loop
-    set_event_loop_state(0);
-    connect_disconnect_client(port, "127.0.0.1");
-
-    pthread_join(server_thread, NULL);
 }
 void test_invalid_ttl_value(void) {
-    set_event_loop_state(1);
-    pthread_t server_thread;
-    int port = 8080;
-    char *ip = "127.0.0.1";
     char buffer[BUFFER_SIZE];
 
-    pthread_create(&server_thread, NULL, run_server_thread, &port);
-
-    // Small delay for server to init
-    server_init_delay();
-
-    // Test scenario
-    int sockfd = connect_client(port, ip);
+    int sockfd = connect_client(TEST_PORT, TEST_ADDRESS);
 
     send_client_msg_and_wait_response(
         sockfd, "SET test_key11 test_value -1\r\n", buffer);
@@ -417,28 +308,12 @@ void test_invalid_ttl_value(void) {
     TEST_ASSERT_EQUAL_STRING("ERROR: INVALID TTL\r\n", buffer);
 
     disconnect_client(sockfd);
-
-    //   To shutdown the event loop
-    set_event_loop_state(0);
-    connect_disconnect_client(port, "127.0.0.1");
-
-    pthread_join(server_thread, NULL);
 }
 
 void test_passive_ttl_cache(void) {
-    set_event_loop_state(1);
-    pthread_t server_thread;
-    int port = 8080;
-    char *ip = "127.0.0.1";
     char buffer[BUFFER_SIZE];
 
-    pthread_create(&server_thread, NULL, run_server_thread, &port);
-
-    // Small delay for server to init
-    server_init_delay();
-
-    // Test scenario
-    int sockfd = connect_client(port, ip);
+    int sockfd = connect_client(TEST_PORT, TEST_ADDRESS);
 
     send_client_msg_and_wait_response(sockfd, "SET test_key11 test_value 1\r\n",
                                       buffer);
@@ -469,28 +344,12 @@ void test_passive_ttl_cache(void) {
     TEST_ASSERT_EQUAL_STRING("1\r\n", buffer);
 
     disconnect_client(sockfd);
-
-    //   To shutdown the event loop
-    set_event_loop_state(0);
-    connect_disconnect_client(port, "127.0.0.1");
-
-    pthread_join(server_thread, NULL);
 }
 
 void test_active_ttl_cache(void) {
-    set_event_loop_state(1);
-    pthread_t server_thread;
-    int port = 8080;
-    char *ip = "127.0.0.1";
     char buffer[BUFFER_SIZE];
 
-    pthread_create(&server_thread, NULL, run_server_thread, &port);
-
-    // Small delay for server to init
-    server_init_delay();
-
-    // Test scenario
-    int sockfd = connect_client(port, ip);
+    int sockfd = connect_client(TEST_PORT, TEST_ADDRESS);
 
     send_client_msg_and_wait_response(sockfd, "SET test_key11 test_value 1\r\n",
                                       buffer);
@@ -517,24 +376,14 @@ void test_active_ttl_cache(void) {
 
     send_client_msg_and_wait_response(sockfd, "KEYS_NUM\r\n", buffer);
     TEST_ASSERT_EQUAL_STRING("1\r\n", buffer);
-    // send_client_msg(sockfd, "GET test_key11\r\n", buffer);
-    // TEST_ASSERT_EQUAL_STRING("ERROR: KEY NOT FOUND\r\n", buffer);
 
     disconnect_client(sockfd);
-
-    //   To shutdown the event loop
-    set_event_loop_state(0);
-    connect_disconnect_client(port, "127.0.0.1");
-
-    pthread_join(server_thread, NULL);
 }
 // To-Do
 void test_handle_client_read_and_write(void) {}
 
 int main(void) {
     UNITY_BEGIN();
-    RUN_TEST(test_add_and_remove_client);
-    RUN_TEST(test_add_and_clean_client);
     RUN_TEST(test_run_server_initialization);
     RUN_TEST(test_run_server_multiple_clients);
     RUN_TEST(test_cache_api);

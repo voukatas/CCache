@@ -4,6 +4,18 @@
 #include <string.h>
 #include <time.h>
 
+void increment_active_connections(void) {
+    CONNECTIONS_INCREMENT(active_connections);
+}
+void decrement_active_connections(void) {
+    CONNECTIONS_DECREMENT(active_connections);
+}
+int get_active_connections(void) {
+    // #warning "TESTING macro is defined"
+    //  perror("-----get_active_connections");
+    return CONNECTIONS_GET(active_connections);
+}
+
 // A custom clean function that is used as a callback in the hashtable
 void custom_cleanup(void *arg) {
     ttl_entry_t *ttl_entry = arg;
@@ -21,71 +33,54 @@ bool is_entry_expired(ttl_entry_t *entry, time_t current_time) {
 }
 
 // Adds a client to the linked list which is used to track all the clients
-void add_client_to_list(client_node_t **head, node_data_t *client_data) {
-    client_node_t *new_node = malloc(sizeof(client_node_t));
-    if (!new_node) {
-        perror("malloc failed");
-        return;
-    }
-    new_node->client_data = client_data;
-    new_node->next = *head;
-    *head = new_node;
-    active_connections++;
-}
+// void add_client_to_list(client_node_t **head, node_data_t *client_data) {
+//     client_node_t *new_node = malloc(sizeof(client_node_t));
+//     if (!new_node) {
+//         perror("malloc failed");
+//         return;
+//     }
+//     new_node->client_data = client_data;
+//     new_node->next = *head;
+//     *head = new_node;
+//     active_connections++;
+// }
 
 // Remove client from the linked list
-void remove_client_from_list(client_node_t **head, node_data_t *client_data) {
-    client_node_t *current = *head;
-    client_node_t *prev = NULL;
-
-    while (current != NULL) {
-        if (current->client_data == client_data) {
-            if (prev == NULL) {
-                *head = current->next;
-            } else {
-                prev->next = current->next;
-            }
-            if (current->client_data && current->client_data->data.client) {
-                close(current->client_data->data.client->fd);
-                free(current->client_data->data.client);
-                current->client_data->data.client = NULL;
-            }
-            if (current->client_data) {
-                free(current->client_data);
-                current->client_data = NULL;
-                current->next = NULL;
-            }
-            free(current);
-            current = NULL;
-            active_connections--;
-            return;
-        }
-        prev = current;
-        current = current->next;
+void remove_client_from_list(node_data_t *client_data) {
+    if (client_data && client_data->data.client) {
+        close(client_data->data.client->fd);
+        free(client_data->data.client);
+        client_data->data.client = NULL;
     }
+    if (client_data) {
+        free(client_data);
+        client_data = NULL;
+    }
+    decrement_active_connections();
+    return;
 }
 
-// Clean Up/free the clients linked list
-void cleanup_all_clients(client_node_t **head) {
-    printf("Cleanup Triggered\n");
-    client_node_t *current = *head;
-    while (current) {
-        client_node_t *next = current->next;
-        if (current->client_data && current->client_data->data.client) {
-            close(current->client_data->data.client->fd);
-            free(current->client_data->data.client);
-            current->client_data->data.client = NULL;
-        }
-        if (current->client_data) {
-            free(current->client_data);
-            current->client_data = NULL;
-            current->next = NULL;
-        }
-        free(current);
-        current = next;
-    }
-    *head = NULL;
-}
+// // Clean Up/free the clients linked list
+// void cleanup_all_clients(client_node_t **head) {
+//     printf("Cleanup Triggered\n");
+//     client_node_t *current = *head;
+//     while (current) {
+//         client_node_t *next = current->next;
+//         if (current->client_data && current->client_data->data.client) {
+//             close(current->client_data->data.client->fd);
+//             free(current->client_data->data.client);
+//             current->client_data->data.client = NULL;
+//         }
+//         if (current->client_data) {
+//             free(current->client_data);
+//             current->client_data = NULL;
+//             current->next = NULL;
+//         }
+//         free(current);
+//         current = next;
+//     }
+//     *head = NULL;
+// }
 
 // Remove a client from the epoll, so it wont track it and remove the client
 // from the client linked list
@@ -94,7 +89,7 @@ void delete_resources(int epoll_fd, client_t *client, struct epoll_event *ev) {
         perror("epoll_ctl: EPOLL_CTL_DEL failed");
     }
 
-    remove_client_from_list(&client_list_head, (node_data_t *)ev->data.ptr);
+    remove_client_from_list((node_data_t *)ev->data.ptr);
 }
 
 static void set_error_msg(int epoll_fd, client_t *client,
@@ -199,7 +194,7 @@ static void process_command(char *command, char *response) {
 
     } else if (strncmp(command_type, "CONNECTIONS", 11) == 0 && num_args == 1) {
         // I need to rethink this thing
-        snprintf(response, BUFFER_SIZE, "%d\r\n", active_connections);
+        snprintf(response, BUFFER_SIZE, "%d\r\n", get_active_connections());
         printf("Processing command response: %s\n", response);
         return;
     } else if (strncmp(command_type, "KEYS_NUM", 8) == 0 && num_args == 1) {

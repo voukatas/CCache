@@ -12,14 +12,20 @@
 #include "../include/config.h"
 #include "../include/signal_handler.h"
 
-client_node_t *client_list_head = NULL;
-int active_connections = 0;
+// client_node_t *client_list_head = NULL;
+CONNECTIONS_TYPE active_connections = CONNECTIONS_INIT;
+atomic_int server_state = SERVER_STATE_INITIALIZING;
 node_data_t *server_event = NULL;
 node_data_t *timer_event = NULL;
 hash_table_t *hash_table_main = NULL;
 int timer_fd = 0;
 
 void hash_table_cleanup_expired(hash_table_t *ht);
+
+void set_server_state(server_state_t state) {
+    atomic_store(&server_state, state);
+}
+server_state_t get_server_state(void) { return atomic_load(&server_state); }
 
 static void set_non_blocking(int socket) {
     int flags = fcntl(socket, F_GETFL, 0);
@@ -217,7 +223,8 @@ static void handle_event(int epoll_fd, struct epoll_event *event) {
         }
 
         // Add client to the linked list for cleanup on shutdown
-        add_client_to_list(&client_list_head, client_event);
+        // add_client_to_list(&client_list_head, client_event);
+        increment_active_connections();
         printf("Added Client: %p\n", client);
     } else if (event_data != NULL && event_data->event_type == EVENT_CLIENT) {
         client_t *client = event_data->data.client;
@@ -233,10 +240,14 @@ static void handle_event(int epoll_fd, struct epoll_event *event) {
         if (event->events & EPOLLIN) {
             printf("Ready to read\n");
             handle_client_read(client, event, epoll_fd);
+            printf("Exit Ready to read\n");
         }
+        // use an if-else clause here if you want more resource fairness and not
+        // speed on response
         if (event->events & EPOLLOUT) {
             printf("Ready to write\n");
             handle_client_write(client, event, epoll_fd);
+            printf("Exit Ready to write\n");
         }
 
     } else if (event_data != NULL && event_data->event_type == EVENT_TIMER) {
@@ -275,8 +286,11 @@ void hash_table_cleanup_expired(hash_table_t *ht) {
 }
 
 int run_server(int port) {
-    active_connections = 0;
-    keep_running = 1;
+    // #warning "TESTING macro is defined"
+    CONNECTIONS_STORE(active_connections, CONNECTIONS_INIT);
+    KEEP_RUNNING_STORE(keep_running, KEEP_RUNNING_INIT);
+    // keep_running = 1;
+    set_server_state(SERVER_STATE_INITIALIZING);
     // Create hashtable
     hash_table_main = hash_table_create(HASH_TABLE_STARTING_SIZE);
     //  Set up signal handling
@@ -287,14 +301,17 @@ int run_server(int port) {
     int epoll_fd = setup_epoll(server_fd, timer_fd);
 
     printf("Server is listening on port %d\n", port);
+    set_server_state(SERVER_STATE_RUNNING);
 
     struct epoll_event events[MAX_EVENTS];
 
     // Event Loop
     while (KEEP_RUNNING_LOAD(keep_running)) {
+        printf("before epoll_wait\n");
         int nfds =
             epoll_wait(epoll_fd, events, MAX_EVENTS,
                        -1);  // returns as soon as an event occurs, no delay
+        printf("after epoll_wait\n");
         if (!KEEP_RUNNING_LOAD(keep_running)) {
             break;
         }
@@ -308,11 +325,13 @@ int run_server(int port) {
         }
 
         for (int i = 0; i < nfds; ++i) {
+            printf("handle_event called\n");
             handle_event(epoll_fd, &events[i]);
         }
     }
     // Cleanup on shutdown
-    cleanup_all_clients(&client_list_head);
+    // cleanup_all_clients(&client_list_head);
+    set_server_state(SERVER_STATE_STOPPED);
     free(server_event);
     server_event = NULL;
     free(timer_event);
@@ -321,7 +340,8 @@ int run_server(int port) {
     close(server_fd);
     close(timer_fd);
     hash_table_cleanup(hash_table_main, custom_cleanup);
-    active_connections = 0;
+    CONNECTIONS_STORE(active_connections, CONNECTIONS_INIT);
+    // active_connections = CONNECTIONS_INIT;
     printf("SERVER STOPPED\n");
     return 0;
 }
