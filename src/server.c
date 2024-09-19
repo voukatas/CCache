@@ -8,8 +8,8 @@
 #include <sys/timerfd.h>
 #include <time.h>
 
-#include "../include/client.h"
 #include "../include/config.h"
+#include "../include/connection.h"
 #include "../include/signal_handler.h"
 
 // client_node_t *client_list_head = NULL;

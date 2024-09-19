@@ -51,7 +51,7 @@ make test_app
 #gcov your_file (eg. src/server.c)
 cd test_obj/
 lcov --capture --directory . --output-file coverage.info && genhtml coverage.info --output-directory out
-# Open index.html
+# open out/index.html
 
 # Cleanup
 make clean

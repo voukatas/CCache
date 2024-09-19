@@ -5,26 +5,28 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 
-#include "../include/client.h"
+#include "../include/connection.h"
 #include "../include/server.h"
 #include "../include/signal_handler.h"
 #include "../unity/unity.h"
 
-void server_delay(unsigned int delay);
-void connect_disconnect_client(int port, char *ip);
+// void server_delay(unsigned int delay);
+static void connect_disconnect_client(int port, char *ip);
 
 // vars
 static const unsigned int WAITING_SERVER_TIMEOUT = 5 * 1000 * 1000;  // 5 sec
 static const unsigned int WAITING_SERVER_INIT = 5 * 1000 * 1000;     // 5 sec
+//
 static const int TEST_PORT = 8080;
 static char *TEST_ADDRESS = "127.0.0.1";
 
 static pthread_t server_thread;
 
 // A small delay for server to start and avoid connection refusals
-void server_delay(unsigned int delay) { usleep(delay); }
+// void server_delay(unsigned int delay) { usleep(delay); }
 
-void wait_for_no_active_connections(unsigned int waiting_time) {
+// Helper funtions
+static void wait_for_no_active_connections(unsigned int waiting_time) {
     unsigned int total_time = 0;
     const unsigned int delay = 100000;  // 100ms
                                         // atomic_load(&(var))
@@ -38,7 +40,7 @@ void wait_for_no_active_connections(unsigned int waiting_time) {
     }
 }
 
-void shutdown_server(void) {
+static void shutdown_server(void) {
     wait_for_no_active_connections(WAITING_SERVER_TIMEOUT);
     // close the event loop
     set_event_loop_state(0);
@@ -48,7 +50,7 @@ void shutdown_server(void) {
     connect_disconnect_client(TEST_PORT, TEST_ADDRESS);
 }
 
-void wait_for_server_to_start(unsigned int waiting_time) {
+static void wait_for_server_to_start(unsigned int waiting_time) {
     unsigned int total_time = 0;
     const unsigned int delay = 100000;  // 100ms
     while (get_server_state() != SERVER_STATE_RUNNING) {
@@ -61,16 +63,18 @@ void wait_for_server_to_start(unsigned int waiting_time) {
     }
 }
 
-void start_server(void) { wait_for_server_to_start(WAITING_SERVER_INIT); }
+static void start_server(void) {
+    wait_for_server_to_start(WAITING_SERVER_INIT);
+}
 
-void *run_server_thread(void *arg) {
+static void *run_server_thread(void *arg) {
     int *port = (int *)arg;
     run_server(*port);
     // run_server(*port, 3, 1);
     return NULL;
 }
 
-int connect_client(int port, char *ip) {
+static int connect_client(int port, char *ip) {
     int sockfd;
     struct sockaddr_in server_addr;
     // char buffer[BUFFER_SIZE];
@@ -99,15 +103,16 @@ int connect_client(int port, char *ip) {
     return sockfd;
 }
 
-void disconnect_client(int sockfd) { close(sockfd); }
+static void disconnect_client(int sockfd) { close(sockfd); }
 
-void connect_disconnect_client(int port, char *ip) {
+static void connect_disconnect_client(int port, char *ip) {
     int sockfd = connect_client(port, ip);
     // connect_client(port, ip);
     disconnect_client(sockfd);
 }
 
-void send_client_msg_and_wait_response(int sockfd, char *msg, char *buffer) {
+static void send_client_msg_and_wait_response(int sockfd, char *msg,
+                                              char *buffer) {
     // char buffer[BUFFER_SIZE];
 
     if (send(sockfd, msg, strlen(msg), 0) < 0) {
@@ -129,7 +134,7 @@ void send_client_msg_and_wait_response(int sockfd, char *msg, char *buffer) {
     // disconnect_client(sockfd);
     //  close(sockfd);
 }
-void send_client_msg(int sockfd, char *msg) {
+static void send_client_msg(int sockfd, char *msg) {
     // char buffer[BUFFER_SIZE];
 
     if (send(sockfd, msg, strlen(msg), 0) < 0) {
@@ -138,8 +143,9 @@ void send_client_msg(int sockfd, char *msg) {
         exit(EXIT_FAILURE);
     }
 }
-void send_client_msg_in_new_conn_and_wait_response(char *msg, int port,
-                                                   char *ip, char *buffer) {
+static void send_client_msg_in_new_conn_and_wait_response(char *msg, int port,
+                                                          char *ip,
+                                                          char *buffer) {
     // char buffer[BUFFER_SIZE];
     int sockfd = connect_client(port, ip);
 

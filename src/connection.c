@@ -1,4 +1,4 @@
-#include "../include/client.h"
+#include "../include/connection.h"
 
 #include <stdio.h>
 #include <string.h>
