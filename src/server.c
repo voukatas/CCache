@@ -1,6 +1,7 @@
 #include "../include/server.h"
 
 #include <arpa/inet.h>
+#include <assert.h>
 #include <bits/time.h>
 #include <fcntl.h>
 #include <stdio.h>

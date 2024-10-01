@@ -4,7 +4,7 @@ CC = gcc -std=gnu11
 # sudo sysctl vm.mmap_rnd_bits=28
 #CFLAGS = -Iunity -Iinclude -Wall -Wextra -Werror -g -pthread -fsanitize=thread -O0
 CFLAGS = -Iunity -Iinclude -Wall -Wextra -Werror -g -pthread -fprofile-arcs -ftest-coverage -O0
-OPTIMIZED_FLAGS = -Iinclude -Wall -Wextra -Werror -O2 -s -pthread
+OPTIMIZED_FLAGS = -Iinclude -Wall -Wextra -Werror -O2 -s -pthread -DNDEBUG
 
 APP_SRC = $(wildcard src/*.c)
 TEST_SRC = $(wildcard test/*.c) $(wildcard unity/*.c)
