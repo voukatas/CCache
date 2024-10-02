@@ -12,6 +12,7 @@
 #include "../include/config.h"
 #include "../include/connection.h"
 #include "../include/signal_handler.h"
+#include "../include/util.h"
 
 // client_node_t *client_list_head = NULL;
 CONNECTIONS_TYPE active_connections = CONNECTIONS_INIT;
@@ -95,7 +96,6 @@ static int setup_cleanup_timerfd() {
         return -1;
     }
 
-    printf("timer_fd: %d\n", tfd);
     printf("CLEAN_UP_TIME: %d\n", CLEAN_UP_TIME);
 
     return tfd;
@@ -151,7 +151,6 @@ static int setup_epoll(int server_fd, int tfd) {
     // The data.fd and data.ptr is union....
     // tev.data.fd = tfd;
     tev.data.ptr = timer_event;
-    printf("tfd %d\n", tfd);
     if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, tfd, &tev) == -1) {
         perror("Epoll ctl add failed");
         close(server_fd);
@@ -168,7 +167,6 @@ static void handle_event(int epoll_fd, struct epoll_event *event) {
     struct sockaddr_in address;
     int addrlen = sizeof(address);
     node_data_t *event_data = (node_data_t *)event->data.ptr;
-    printf("------------- event_data node type:%d\n", event_data->event_type);
 
     if (event_data != NULL && event_data->event_type == EVENT_SERVER) {
         // Accept a new client connection
@@ -239,20 +237,15 @@ static void handle_event(int epoll_fd, struct epoll_event *event) {
 
         // Handle the client request
         if (event->events & EPOLLIN) {
-            printf("Ready to read\n");
             handle_client_read(client, event, epoll_fd);
-            printf("Exit Ready to read\n");
         }
         // use an if-else clause here if you want more resource fairness and not
         // speed on response
         if (event->events & EPOLLOUT) {
-            printf("Ready to write\n");
             handle_client_write(client, event, epoll_fd);
-            printf("Exit Ready to write\n");
         }
 
     } else if (event_data != NULL && event_data->event_type == EVENT_TIMER) {
-        printf("inside else if - timer_fd: %d\n", timer_fd);
         uint64_t expirations;
         ssize_t bytes = read(timer_fd, &expirations,
                              sizeof(expirations));  // Acknowledge the timer
@@ -265,7 +258,7 @@ static void handle_event(int epoll_fd, struct epoll_event *event) {
 }
 
 void hash_table_cleanup_expired(hash_table_t *ht) {
-    printf("---- CleanUp Triggered\n");
+    print_exact_time("---- CleanUp Triggered\n");
 
     time_t current_time = time(NULL);
 
@@ -276,14 +269,14 @@ void hash_table_cleanup_expired(hash_table_t *ht) {
             hash_entry_t *temp = entry->next;
             if (is_entry_expired(ttl_entry_node, current_time)) {
                 //  hash_table_remove will remove also the entry node
-                printf("---- CleanUp Key: %s\n", entry->key);
+                // printf("---- CleanUp Key: %s\n", entry->key);
                 hash_table_remove(hash_table_main, entry->key, custom_cleanup);
             }
             entry = temp;
         }
     }
 
-    printf("---- CleanUp Ended\n");
+    print_exact_time("---- CleanUp Ended\n");
 }
 
 int run_server(int port) {
@@ -298,21 +291,20 @@ int run_server(int port) {
     setup_signal_handling();
     int server_fd = setup_server_socket(port);
     timer_fd = setup_cleanup_timerfd();
-    printf("just before: %d\n", timer_fd);
     int epoll_fd = setup_epoll(server_fd, timer_fd);
+    print_exact_time("SERVER STARTED\n");
 
     printf("Server is listening on port %d\n", port);
+    DEBUG_LOG("Server is listening on port %d\n", port);
     set_server_state(SERVER_STATE_RUNNING);
 
     struct epoll_event events[MAX_EVENTS];
 
     // Event Loop
     while (KEEP_RUNNING_LOAD(keep_running)) {
-        printf("before epoll_wait\n");
         int nfds =
             epoll_wait(epoll_fd, events, MAX_EVENTS,
                        -1);  // returns as soon as an event occurs, no delay
-        printf("after epoll_wait\n");
         if (!KEEP_RUNNING_LOAD(keep_running)) {
             break;
         }
@@ -326,7 +318,6 @@ int run_server(int port) {
         }
 
         for (int i = 0; i < nfds; ++i) {
-            printf("handle_event called\n");
             handle_event(epoll_fd, &events[i]);
         }
     }
@@ -343,6 +334,6 @@ int run_server(int port) {
     hash_table_cleanup(hash_table_main, custom_cleanup);
     CONNECTIONS_STORE(active_connections, CONNECTIONS_INIT);
     // active_connections = CONNECTIONS_INIT;
-    printf("SERVER STOPPED\n");
+    print_exact_time("SERVER STOPPED\n");
     return 0;
 }

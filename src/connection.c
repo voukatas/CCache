@@ -130,9 +130,9 @@ static void process_command(char *command, char *response) {
     if (strncmp(command_type, "SET", 3) == 0 && num_args == 4) {
         // Set a key value on hashmap
         response_value = "OK";
-        printf("key: %s\n", key);
-        printf("value: %s\n", value);
-        printf("ttl_value: %s\n", ttl_value);
+        // printf("key: %s\n", key);
+        // printf("value: %s\n", value);
+        // printf("ttl_value: %s\n", ttl_value);
 
         ttl_entry_t new_ttl_entry;
         new_ttl_entry.value = strdup(value);

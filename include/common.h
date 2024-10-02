@@ -4,6 +4,12 @@
 #include "config.h"
 #include <unistd.h>
 
+#ifdef PDEBUG
+    #define DEBUG_LOG(fmt, ...) printf("DEBUG: " fmt, __VA_ARGS__)
+#else
+    #define DEBUG_LOG(fmt, ...) // Do nothing
+#endif
+
 typedef enum {
     EVENT_SERVER,
     EVENT_CLIENT,
