@@ -2,34 +2,69 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
+#include <sys/time.h>
 #include <time.h>
 
-void get_current_time(char* buffer, size_t buffer_size) {
+static void get_current_time(char* buffer, size_t buffer_size) {
     time_t now = time(NULL);
     struct tm* t = localtime(&now);
     strftime(buffer, buffer_size, "%Y-%m-%d %H:%M:%S", t);
+    // Add milliseconds
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    size_t len = strlen(buffer);
+    snprintf(buffer + len, buffer_size - len, ".%03ld", tv.tv_usec / 1000);
 }
 
-void prod_log(int level, const char* level_str, const char* color,
-              const char* format, ...) {
+void print_exact_time(char* message) {
+    struct timeval tv;
+    struct tm* ptm;
+    char time_string[40];
+    long milliseconds;
+    gettimeofday(&tv, NULL);
+    ptm = localtime(&tv.tv_sec);
+    strftime(time_string, sizeof(time_string), "%Y-%m-%d %H:%M:%S", ptm);
+    milliseconds = tv.tv_usec / 1000;
+    printf("[ %s.%03ld ] - %s", time_string, milliseconds, message);
+}
+
+static void prod_log(log_level_t level, const char* level_str,
+                     const char* color, const char* format, va_list args) {
     if (level >= CURRENT_LOG_LEVEL) {
-        char time_buffer[20];
+        char time_buffer[30];
         get_current_time(time_buffer, sizeof(time_buffer));
 
         printf("%s[%s] %s: ", color, time_buffer, level_str);
-
-        va_list args;
-        va_start(args, format);
         vprintf(format, args);
-        va_end(args);
-
         printf("%s\n", ANSI_COLOR_RESET);
     }
 }
 
-// Consider switching to enums
-// typedef enum {
-//     LOG_LEVEL_INFO,
-//     LOG_LEVEL_WARN,
-//     LOG_LEVEL_ERROR
-// } log_level_t;
+void log_info(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    prod_log(LOG_LEVEL_INFO, "INFO", ANSI_COLOR_GREEN, format, args);
+    va_end(args);
+}
+
+void log_warn(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    prod_log(LOG_LEVEL_WARN, "WARN", ANSI_COLOR_YELLOW, format, args);
+    va_end(args);
+}
+
+void log_error(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    prod_log(LOG_LEVEL_ERROR, "ERROR", ANSI_COLOR_RED, format, args);
+    va_end(args);
+}
+
+void log_debug(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    prod_log(LOG_LEVEL_DEBUG, "DEBUG", ANSI_COLOR_CYAN, format, args);
+    va_end(args);
+}

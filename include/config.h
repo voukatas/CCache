@@ -10,11 +10,13 @@
 #define MAX_EVENTS 64
 
 // Log level
+// LOG_LEVEL_DEBUG 0
 // LOG_LEVEL_INFO  1
 // LOG_LEVEL_WARN  2
 // LOG_LEVEL_ERROR 3
-// NO_LOGS         4
-#define LOG_LEVEL LOG_LEVEL_INFO
+// LOG_LEVEL_NONE  4
+#define LOG_LEVEL LOG_LEVEL_DEBUG
+//#define LOG_LEVEL LOG_LEVEL_ERROR
 
 #ifdef TESTING
 //#warning "TESTING macro is defined"

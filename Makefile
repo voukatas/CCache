@@ -3,7 +3,7 @@ CC = gcc -std=gnu11
 # You might need this in order to run properly
 # sudo sysctl vm.mmap_rnd_bits=28
 #CFLAGS = -Iunity -Iinclude -Wall -Wextra -Werror -g -pthread -fsanitize=thread -O0
-CFLAGS = -Iunity -Iinclude -Wall -Wextra -Werror -g -pthread -fprofile-arcs -ftest-coverage -O0 -DPDEBUG
+CFLAGS = -Iunity -Iinclude -Wall -Wextra -Werror -g -pthread -fprofile-arcs -ftest-coverage -O0 
 OPTIMIZED_FLAGS = -Iinclude -Wall -Wextra -Werror -O2 -s -pthread -DNDEBUG
 
 APP_SRC = $(wildcard src/*.c)
