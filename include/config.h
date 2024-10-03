@@ -17,6 +17,7 @@
 // LOG_LEVEL_NONE  4
 #define LOG_LEVEL LOG_LEVEL_DEBUG
 //#define LOG_LEVEL LOG_LEVEL_ERROR
+//#define LOG_LEVEL LOG_LEVEL_NONE
 
 #ifdef TESTING
 //#warning "TESTING macro is defined"

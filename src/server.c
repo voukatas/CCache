@@ -96,7 +96,7 @@ static int setup_cleanup_timerfd() {
         return -1;
     }
 
-    printf("CLEAN_UP_TIME: %d\n", CLEAN_UP_TIME);
+    log_info("CLEAN_UP_TIME: %d\n", CLEAN_UP_TIME);
 
     return tfd;
 }
@@ -221,16 +221,14 @@ static void handle_event(int epoll_fd, struct epoll_event *event) {
             return;
         }
 
-        // Add client to the linked list for cleanup on shutdown
-        // add_client_to_list(&client_list_head, client_event);
         increment_active_connections();
-        printf("Added Client: %p\n", client);
+        log_debug("Added Client: %p\n", client);
     } else if (event_data != NULL && event_data->event_type == EVENT_CLIENT) {
         client_t *client = event_data->data.client;
 
         //  Handle client disconnect or error
         if (event->events & (EPOLLHUP | EPOLLERR | EPOLLRDHUP)) {
-            printf("Disconnect event for %p\n", event_data->data.client);
+            log_debug("Disconnect event for %p\n", event_data->data.client);
             delete_resources(epoll_fd, client, event);
             return;
         }
@@ -268,8 +266,7 @@ void hash_table_cleanup_expired(hash_table_t *ht) {
             ttl_entry_t *ttl_entry_node = entry->value;
             hash_entry_t *temp = entry->next;
             if (is_entry_expired(ttl_entry_node, current_time)) {
-                //  hash_table_remove will remove also the entry node
-                // printf("---- CleanUp Key: %s\n", entry->key);
+                log_debug("CleanUp Key: %s\n", entry->key);
                 hash_table_remove(hash_table_main, entry->key, custom_cleanup);
             }
             entry = temp;

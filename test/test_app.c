@@ -48,9 +48,9 @@ static void shutdown_server(void) {
     wait_for_no_active_connections(WAITING_SERVER_TIMEOUT);
     // close the event loop
     set_event_loop_state(0);
-    print_msg("send disconnect signal\n");
-    // this is needed so the event loop get in state of checking again if it is
-    // running
+    // print_msg("send disconnect signal\n");
+    //  this is needed so the event loop get in state of checking again if it is
+    //  running
     connect_disconnect_client(TEST_PORT, TEST_ADDRESS);
 }
 
