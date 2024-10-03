@@ -12,11 +12,11 @@
 #include "../include/config.h"
 #include "../include/connection.h"
 #include "../include/signal_handler.h"
-#include "../include/util.h"
 
 // client_node_t *client_list_head = NULL;
 CONNECTIONS_TYPE active_connections = CONNECTIONS_INIT;
 atomic_int server_state = SERVER_STATE_INITIALIZING;
+int CURRENT_LOG_LEVEL = LOG_LEVEL;
 node_data_t *server_event = NULL;
 node_data_t *timer_event = NULL;
 hash_table_t *hash_table_main = NULL;
@@ -258,7 +258,7 @@ static void handle_event(int epoll_fd, struct epoll_event *event) {
 }
 
 void hash_table_cleanup_expired(hash_table_t *ht) {
-    print_exact_time("---- CleanUp Triggered\n");
+    LOG_INFO("---- CleanUp Triggered\n");
 
     time_t current_time = time(NULL);
 
@@ -276,7 +276,7 @@ void hash_table_cleanup_expired(hash_table_t *ht) {
         }
     }
 
-    print_exact_time("---- CleanUp Ended\n");
+    LOG_INFO("---- CleanUp Ended\n");
 }
 
 int run_server(int port) {
@@ -292,7 +292,7 @@ int run_server(int port) {
     int server_fd = setup_server_socket(port);
     timer_fd = setup_cleanup_timerfd();
     int epoll_fd = setup_epoll(server_fd, timer_fd);
-    print_exact_time("SERVER STARTED\n");
+    LOG_INFO("SERVER STARTED\n");
 
     printf("Server is listening on port %d\n", port);
     DEBUG_LOG("Server is listening on port %d\n", port);
@@ -334,6 +334,6 @@ int run_server(int port) {
     hash_table_cleanup(hash_table_main, custom_cleanup);
     CONNECTIONS_STORE(active_connections, CONNECTIONS_INIT);
     // active_connections = CONNECTIONS_INIT;
-    print_exact_time("SERVER STOPPED\n");
+    LOG_INFO("SERVER STOPPED\n");
     return 0;
 }

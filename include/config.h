@@ -1,11 +1,20 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include "log_levels.h"
+
 #define CCACHE_VERSION "0.1.0"
 
 #define PORT 8080
 // The number of events that the epoll will grab
 #define MAX_EVENTS 64
+
+// Log level
+// LOG_LEVEL_INFO  1
+// LOG_LEVEL_WARN  2
+// LOG_LEVEL_ERROR 3
+// NO_LOGS         4
+#define LOG_LEVEL LOG_LEVEL_INFO
 
 #ifdef TESTING
 //#warning "TESTING macro is defined"
