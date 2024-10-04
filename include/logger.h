@@ -19,8 +19,6 @@ void log_warn(const char* format, ...);
 void log_error(const char* format, ...);
 void log_debug(const char* format, ...);
 
-// Vars
-extern log_level_t CURRENT_LOG_LEVEL;
 
 #endif // LOGGER_H
 

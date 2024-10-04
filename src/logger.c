@@ -6,6 +6,8 @@
 #include <sys/time.h>
 #include <time.h>
 
+#include "../include/config.h"
+
 static void get_current_time(char* buffer, size_t buffer_size) {
     time_t now = time(NULL);
     struct tm* t = localtime(&now);
@@ -19,7 +21,7 @@ static void get_current_time(char* buffer, size_t buffer_size) {
 
 static void prod_log(log_level_t level, const char* level_str,
                      const char* color, const char* format, va_list args) {
-    if (level >= CURRENT_LOG_LEVEL) {
+    if (level >= LOG_LEVEL) {
         char time_buffer[30];
         get_current_time(time_buffer, sizeof(time_buffer));
 

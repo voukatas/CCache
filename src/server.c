@@ -15,8 +15,6 @@
 
 CONNECTIONS_TYPE active_connections = CONNECTIONS_INIT;
 atomic_int server_state = SERVER_STATE_INITIALIZING;
-log_level_t CURRENT_LOG_LEVEL = LOG_LEVEL;
-const eviction_policy_t CURRENT_EVICTION = EVICTION;
 
 node_data_t *server_event = NULL;
 node_data_t *timer_event = NULL;
