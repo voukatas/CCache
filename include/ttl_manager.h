@@ -20,6 +20,10 @@ typedef struct ttl_entry {
     int ttl;
 } ttl_entry_t;
 
+typedef struct ttl_manager {
+    hash_table_t *hash_table_main;
+} ttl_manager_t;
+
 
 // Functions
 void ttl_set(char *key, char *value, char *ttl_value, char *response);

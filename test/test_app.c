@@ -1,6 +1,8 @@
 #include "../unity/unity.h"
-#include "test.h"
 #include "util.h"
+#if defined(EVICTION_FLAG_TTL) || defined(EVICTION_FLAG_LRU)
+#include "test.h"
+#endif
 
 pthread_t server_thread;
 
