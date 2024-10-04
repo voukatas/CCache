@@ -9,9 +9,11 @@
 #include <sys/epoll.h>
 #include "common.h"
 #include "hashtable.h"
-#include "../include/ttl.h"
+#include "../include/ttl_manager.h"
 #include <stdbool.h>
 #include <stdatomic.h>
+#include "../include/ttl_manager.h"
+#include "../include/response.h"
 
 
 #ifdef TESTING
@@ -44,6 +46,5 @@ void decrement_active_connections(void);
 int get_active_connections(void);
 
 extern CONNECTIONS_TYPE active_connections;
-extern hash_table_t *hash_table_main;
 
 #endif // CLIENT_H

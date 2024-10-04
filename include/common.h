@@ -4,6 +4,7 @@
 #include "config.h"
 #include <unistd.h>
 #include "logger.h"
+#include "hashtable.h"
 
 typedef enum {
     EVENT_SERVER,
@@ -29,5 +30,8 @@ typedef struct {
             client_t *client; // Use this if client
     } data;
 } node_data_t;
+
+
+extern hash_table_t *hash_table_main;
 
 #endif // COMMON_H
