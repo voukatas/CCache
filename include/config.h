@@ -116,7 +116,7 @@
     #define HASH_TABLE_STARTING_SIZE 1000
 
     #undef LOG_LEVEL
-    #define LOG_LEVEL LOG_LEVEL_ERROR
+    #define LOG_LEVEL LOG_LEVEL_DEBUG
 
 #endif
 

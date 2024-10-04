@@ -57,7 +57,11 @@ run_tests() {
 run_tests "TTL"
 run_tests "LRU"
 
-echo "============================================"
-echo "All tests passed for both eviction policies!"
-echo "============================================"
+echo "================================================"
+echo "=                                              ="
+echo "=                                              ="
+echo "= All tests passed for both eviction policies! ="
+echo "=                                              ="
+echo "=                                              ="
+echo "================================================"
 
