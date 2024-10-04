@@ -1,7 +1,5 @@
 #include <stdio.h>
 #define TESTING
-// #include "../include/hashtable.h"
-// #include "../include/mock_malloc.h"
 #include <arpa/inet.h>
 #include <pthread.h>
 
@@ -292,6 +290,18 @@ void test_cache_api_error_command_too_large(void) {
     disconnect_client(sockfd);
 }
 
+void test_cache_api_error_unknown_or_malformed_command(void) {
+    char buffer[BUFFER_SIZE];
+
+    int sockfd = connect_client(TEST_PORT, TEST_ADDRESS);
+
+    send_client_msg_and_wait_response(sockfd, "PET test_key1 a_val 30\r\n",
+                                      buffer);
+    TEST_ASSERT_EQUAL_STRING("ERROR: UNKNOWN OR MALFORMED COMMAND\r\n", buffer);
+
+    disconnect_client(sockfd);
+}
+
 void test_cache_api_partitioned_msg(void) {
     char buffer[BUFFER_SIZE];
 
@@ -403,6 +413,7 @@ int main(void) {
     RUN_TEST(test_active_ttl_cache);
     RUN_TEST(test_invalid_ttl_value);
     RUN_TEST(test_cache_api_partitioned_msg);
+    RUN_TEST(test_cache_api_error_unknown_or_malformed_command);
 
     return UNITY_END();
 }

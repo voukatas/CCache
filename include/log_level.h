@@ -1,5 +1,5 @@
-#ifndef LOG_LEVELS_H
-#define LOG_LEVELS_H
+#ifndef LOG_LEVEL_H
+#define LOG_LEVEL_H
 // Log levels
 typedef enum {
     LOG_LEVEL_DEBUG,
@@ -9,4 +9,4 @@ typedef enum {
     LOG_LEVEL_NONE // no logs
 } log_level_t;
 
-#endif //LOG_LEVELS_H
+#endif //LOG_LEVEL_H

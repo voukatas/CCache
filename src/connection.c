@@ -4,6 +4,10 @@
 #include <string.h>
 #include <time.h>
 
+// Functions
+static void write_response_str(char *response, char *response_value);
+static void write_response_int(char *response, int response_value);
+
 void increment_active_connections(void) {
     CONNECTIONS_INCREMENT(active_connections);
 }
@@ -79,104 +83,153 @@ static void set_error_msg(int epoll_fd, client_t *client,
     }
 }
 
-static void process_command(char *command, char *response) {
-    log_debug("Processing command: %s\n", command);
-
+static void ttl_set(char *key, char *value, char *ttl_value, char *response) {
     char *response_value = NULL;
+    // Set a key value on hashmap
+    response_value = "OK";
+    log_debug("key: %s\n", key);
+    log_debug("value: %s\n", value);
+    log_debug("ttl_value: %s\n", ttl_value);
+
+    ttl_entry_t new_ttl_entry;
+    new_ttl_entry.value = strdup(value);
+    if (!new_ttl_entry.value) {
+        fprintf(stderr, "failed to allocate memory during hash_table_set");
+        response_value = "ERROR: MEMORY ALLOC FAILURE";
+        snprintf(response, BUFFER_SIZE, "%s\r\n", response_value);
+        log_debug("Processing command response: %s\n", response);
+        return;
+    }
+    new_ttl_entry.timestamp = time(NULL);
+
+    char *endptr;
+    errno = 0;
+    long ttl = strtol(ttl_value, &endptr, 10);
+    if (errno != 0 || endptr == ttl_value || *endptr != '\0' || ttl < 0) {
+        response_value = "ERROR: INVALID TTL";
+        write_response_str(response, response_value);
+        free(new_ttl_entry.value);
+        return;
+    }
+
+    new_ttl_entry.ttl = (int)ttl;
+
+    int error = hash_table_set(hash_table_main, key, &new_ttl_entry,
+                               sizeof(new_ttl_entry), custom_cleanup);
+    if (error != 0) {
+        fprintf(stderr, "failed to allocate memory during set_value");
+        response_value = "ERROR: MEMORY ALLOC FAILURE";
+    }
+
+    write_response_str(response, response_value);
+}
+
+static void ttl_get(char *key, char *response) {
+    char *response_value = NULL;
+    // Get a value from hashmap
+    ttl_entry_t *ttl_entry = hash_table_get(hash_table_main, key);
+    if (ttl_entry == NULL) {
+        response_value = "ERROR: KEY NOT FOUND";
+    } else {
+        time_t current_time = time(NULL);
+        if (is_entry_expired(ttl_entry, current_time)) {
+            // Expired
+            hash_table_remove(hash_table_main, key, custom_cleanup);
+            response_value = "ERROR: KEY NOT FOUND";
+        } else {
+            // Valid
+            response_value = ttl_entry->value;
+        }
+    }
+    write_response_str(response, response_value);
+}
+
+static void ttl_delete(char *key, char *response) {
+    char *response_value = NULL;
+    // Delete a value
+    response_value = "OK";
+    ttl_entry_t *ttl_entry = hash_table_get(hash_table_main, key);
+    if (ttl_entry == NULL) {
+        response_value = "ERROR: KEY NOT FOUND";
+    } else {
+        hash_table_remove(hash_table_main, key, custom_cleanup);
+    }
+    write_response_str(response, response_value);
+}
+
+static void ttl_connections(char *response) {
+    // snprintf(response, BUFFER_SIZE, "%d\r\n", get_active_connections());
+    // log_debug("Processing command response: %s\n", response);
+    write_response_int(response, get_active_connections());
+}
+
+static void ttl_keys_num(char *response) {
+    // snprintf(response, BUFFER_SIZE, "%d\r\n", hash_table_main->size);
+    // log_debug("Processing command response: %s\n", response);
+    write_response_int(response, hash_table_main->size);
+}
+
+static void process_command_for_ttl(char *command, char *response) {
     char command_type[20] = {0};
     char key[BUFFER_SIZE] = {0};
     char value[BUFFER_SIZE] = {0};
-    char ttl_value[BUFFER_SIZE] = {0};
-    // value[0] = '\0';
+    char ttl_value[BUFFER_SIZE_TTL] = {0};
 
     int num_args =
         sscanf(command, "%s %s %s %s", command_type, key, value, ttl_value);
 
+    log_debug("Command arguments num: %ld", num_args);
+
+    log_debug("command_type: %.3s", command_type);
+
     if (strncmp(command_type, "SET", 3) == 0 && num_args == 4) {
-        // Set a key value on hashmap
-        response_value = "OK";
-        log_debug("key: %s\n", key);
-        log_debug("value: %s\n", value);
-        log_debug("ttl_value: %s\n", ttl_value);
-
-        ttl_entry_t new_ttl_entry;
-        new_ttl_entry.value = strdup(value);
-        if (!new_ttl_entry.value) {
-            fprintf(stderr, "failed to allocate memory during hash_table_set");
-            response_value = "ERROR: MEMORY ALLOC FAILURE";
-            snprintf(response, BUFFER_SIZE, "%s\r\n", response_value);
-            log_debug("Processing command response: %s\n", response);
-            return;
-        }
-        new_ttl_entry.timestamp = time(NULL);
-
-        char *endptr;
-        errno = 0;
-        long ttl = strtol(ttl_value, &endptr, 10);
-        if (errno != 0 || endptr == ttl_value || *endptr != '\0' || ttl < 0) {
-            response_value = "ERROR: INVALID TTL";
-            snprintf(response, BUFFER_SIZE, "%s\r\n", response_value);
-            log_debug("Processing command response: %s\n", response);
-            free(new_ttl_entry.value);
-            return;
-        }
-
-        new_ttl_entry.ttl = (int)ttl;
-
-        int error = hash_table_set(hash_table_main, key, &new_ttl_entry,
-                                   sizeof(new_ttl_entry), custom_cleanup);
-        if (error != 0) {
-            fprintf(stderr, "failed to allocate memory during set_value");
-            response_value = "ERROR: MEMORY ALLOC FAILURE";
-        }
+        ttl_set(key, value, ttl_value, response);
 
     } else if (strncmp(command_type, "GET", 3) == 0 && num_args == 2) {
-        // Get a value from hashmap
-        ttl_entry_t *ttl_entry = hash_table_get(hash_table_main, key);
-        if (ttl_entry == NULL) {
-            response_value = "ERROR: KEY NOT FOUND";
-        } else {
-            time_t current_time = time(NULL);
-            if (is_entry_expired(ttl_entry, current_time)) {
-                // Expired
-                hash_table_remove(hash_table_main, key, custom_cleanup);
-                response_value = "ERROR: KEY NOT FOUND";
-            } else {
-                // Valid
-                response_value = ttl_entry->value;
-            }
-        }
+        ttl_get(key, response);
 
     } else if (strncmp(command_type, "DELETE", 6) == 0 && num_args == 2) {
-        // Delete a value
-        response_value = "OK";
-        ttl_entry_t *ttl_entry = hash_table_get(hash_table_main, key);
-        if (ttl_entry == NULL) {
-            response_value = "ERROR: KEY NOT FOUND";
-        } else {
-            hash_table_remove(hash_table_main, key, custom_cleanup);
-        }
+        ttl_delete(key, response);
 
     } else if (strncmp(command_type, "CONNECTIONS", 11) == 0 && num_args == 1) {
-        // I need to rethink this thing
-        snprintf(response, BUFFER_SIZE, "%d\r\n", get_active_connections());
-        log_debug("Processing command response: %s\n", response);
-        return;
+        ttl_connections(response);
+
     } else if (strncmp(command_type, "KEYS_NUM", 8) == 0 && num_args == 1) {
-        snprintf(response, BUFFER_SIZE, "%d\r\n", hash_table_main->size);
-        log_debug("Processing command response: %s\n", response);
-        return;
+        ttl_keys_num(response);
+
     } else {
         // Unknown command
-        response_value = "ERROR: UNKNOWN OR MALFORMED COMMAND";
+        char *response_value = "ERROR: UNKNOWN OR MALFORMED COMMAND";
+        write_response_str(response, response_value);
     }
+}
 
+static void write_response_str(char *response, char *response_value) {
     // Consider the \r\n\0
     if (strlen(response_value) >= BUFFER_SIZE - 3) {
         response_value = "ERROR: RESPONSE OVERFLOW";
     }
     snprintf(response, BUFFER_SIZE, "%s\r\n", response_value);
     log_debug("Processing command response: %s\n", response);
+}
+
+static void write_response_int(char *response, int response_value) {
+    snprintf(response, BUFFER_SIZE, "%d\r\n", response_value);
+    log_debug("Processing command response: %s\n", response);
+}
+
+static void process_command(char *command, char *response) {
+    log_debug("Processing command: %s\n", command);
+
+    if (EVICTION == EVICTION_TTL) {
+        log_debug("In EVICTION_TTL mode\n");
+        process_command_for_ttl(command, response);
+
+    } else if (EVICTION == EVICTION_LRU) {
+        log_debug("In EVICTION_LRU mode\n");
+    } else {
+        log_error("UNKNOWN EVICTION POLICY mode\n");
+    }
 }
 
 void handle_client_read(client_t *client, struct epoll_event *ev,

@@ -13,10 +13,11 @@
 #include "../include/connection.h"
 #include "../include/signal_handler.h"
 
-// client_node_t *client_list_head = NULL;
 CONNECTIONS_TYPE active_connections = CONNECTIONS_INIT;
 atomic_int server_state = SERVER_STATE_INITIALIZING;
 log_level_t CURRENT_LOG_LEVEL = LOG_LEVEL;
+const eviction_policy_t CURRENT_EVICTION = EVICTION;
+
 node_data_t *server_event = NULL;
 node_data_t *timer_event = NULL;
 hash_table_t *hash_table_main = NULL;

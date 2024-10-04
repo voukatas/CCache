@@ -2,7 +2,7 @@
 #define LOGGER_H
 
 #include <stdlib.h>
-#include "log_levels.h"
+#include "log_level.h"
 
 // Color definitions
 #define ANSI_COLOR_RED     "\033[31m"

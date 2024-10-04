@@ -141,7 +141,8 @@ echo -ne "KEYS_NUM\r\n" | nc localhost 8080
 CCache uses a custom hashtable library to manage key-value pairs efficiently. This library is developed as a separate project and can be found on GitHub on the same repo.
 
 ## To-Do
-- Either remove the linked list that keeps track of the connections (since it adds management complexity) or implement a periodic validation of the connections
+- ~~Either remove the linked list that keeps track of the connections (since it adds management complexity) or implement a periodic validation of the connections~~
+- Add API command to change the logging on the fly
 - Add support for more cache eviction policies (e.g., LRU, LFU)
 - Add more unit tests to increase code coverage and stability
 - Replace the stack allocations with heap allocations for the arrays that use the BUFFER_SIZE to support more than 64Kb key-value values. (Currently if more bytes are used it will overflow the stack)
