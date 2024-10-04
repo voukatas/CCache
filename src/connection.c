@@ -122,6 +122,13 @@ static void process_command(char *command, char *response) {
 
     } else if (EVICTION == EVICTION_LRU) {
         log_debug("In EVICTION_LRU mode\n");
+        /*
+         *
+         * Needs to be replaced for LRU mode
+         *
+         *
+         * */
+        process_command_for_ttl(command, response);
     } else {
         log_error("UNKNOWN EVICTION POLICY mode\n");
     }

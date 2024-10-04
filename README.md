@@ -39,8 +39,12 @@ valgrind --leak-check=full --track-origins=yes -s ./ccache_dbg
 valgrind --leak-check=full --track-origins=yes -s ./test_app
 
 # All in one
-make clean && make && valgrind --leak-check=full --track-origins=yes -s ./test_app && valgrind --tool=helgrind ./test_app
-make clean && make && valgrind --leak-check=full --track-origins=yes -s ./test_app && valgrind --tool=helgrind ./ccache_dbg
+make clean && make EVICTION_POLICY=LRU && valgrind --leak-check=full --track-origins=yes -s ./test_app && valgrind --tool=helgrind ./test_app
+make clean && make EVICTION_POLICY=LRU && valgrind --leak-check=full --track-origins=yes -s ./test_app && valgrind --tool=helgrind ./ccache_dbg
+# or for TTL
+make clean && make EVICTION_POLICY=TTL && valgrind --leak-check=full --track-origins=yes -s ./test_app && valgrind --tool=helgrind ./test_app
+make clean && make EVICTION_POLICY=TTL && valgrind --leak-check=full --track-origins=yes -s ./test_app && valgrind --tool=helgrind ./ccache_dbg
+
 ```
 ## Check the Code Coverage
 ```bash

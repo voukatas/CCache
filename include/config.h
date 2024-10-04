@@ -61,8 +61,15 @@
  * - LRU (Least Recently Used): Discards the least recently used items first.
  * Default: TTL.
  */
+#ifdef EVICTION_FLAG_TTL
 #define EVICTION EVICTION_TTL
-//#define EVICTION EVICTION_LRU
+#endif
+#ifdef EVICTION_FLAG_LRU
+#define EVICTION EVICTION_LRU
+#endif
+#ifndef EVICTION
+#define EVICTION EVICTION_TTL
+#endif
 
 /**
  * Cleanup interval in seconds for the TTL eviction policy.
@@ -107,6 +114,10 @@
      */
     #undef HASH_TABLE_STARTING_SIZE
     #define HASH_TABLE_STARTING_SIZE 1000
+
+    #undef LOG_LEVEL
+    #define LOG_LEVEL LOG_LEVEL_ERROR
+
 #endif
 
 #endif // CONFIG_H
