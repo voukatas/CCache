@@ -12,7 +12,7 @@
 #include "../include/ttl_manager.h"
 #include <stdbool.h>
 #include <stdatomic.h>
-#include "../include/ttl_manager.h"
+#include "../include/lru_manager.h"
 #include "../include/response.h"
 
 
@@ -37,8 +37,8 @@ void remove_client_from_list(node_data_t *client_data);
 void handle_client_read(client_t *client, struct epoll_event *ev, int epoll_fd);
 void handle_client_write(client_t *client, struct epoll_event *ev, int epoll_fd);
 void delete_resources(int epoll_fd, client_t *client, struct epoll_event *ev);
-void custom_cleanup(void *arg);
-bool is_entry_expired(ttl_entry_t *entry, time_t current_time);
+//void custom_cleanup(void *arg);
+//bool is_entry_expired(ttl_entry_t *entry, time_t current_time);
 
 
 void increment_active_connections(void);

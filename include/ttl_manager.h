@@ -29,5 +29,10 @@ typedef struct ttl_manager {
 void ttl_set(char *key, char *value, char *ttl_value, char *response);
 void ttl_get(char *key, char *response);
 void ttl_delete(char *key, char *response);
+void custom_cleanup_ttl(void *arg);
+bool is_entry_expired(ttl_entry_t *entry, time_t current_time);
+
+// Vars
+extern ttl_manager_t* ttl_manager;
 
 #endif // TTL_MANAGER_H

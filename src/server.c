@@ -11,14 +11,18 @@
 
 #include "../include/config.h"
 #include "../include/connection.h"
+#include "../include/lru_manager.h"
 #include "../include/signal_handler.h"
+#include "../include/ttl_manager.h"
 
 CONNECTIONS_TYPE active_connections = CONNECTIONS_INIT;
 atomic_int server_state = SERVER_STATE_INITIALIZING;
 
 node_data_t *server_event = NULL;
 node_data_t *timer_event = NULL;
-hash_table_t *hash_table_main = NULL;
+// hash_table_t *hash_table_main = NULL;
+ttl_manager_t *ttl_manager = NULL;
+lru_manager_t *lru_manager = NULL;
 int timer_fd = 0;
 
 void hash_table_cleanup_expired(hash_table_t *ht);
@@ -250,7 +254,7 @@ static void handle_event(int epoll_fd, struct epoll_event *event) {
             perror("read from timer_fd failed");
             return;
         }
-        hash_table_cleanup_expired(hash_table_main);
+        hash_table_cleanup_expired(ttl_manager->hash_table_main);
     }
 }
 
@@ -266,7 +270,8 @@ void hash_table_cleanup_expired(hash_table_t *ht) {
             hash_entry_t *temp = entry->next;
             if (is_entry_expired(ttl_entry_node, current_time)) {
                 log_debug("CleanUp Key: %s\n", entry->key);
-                hash_table_remove(hash_table_main, entry->key, custom_cleanup);
+                hash_table_remove(ttl_manager->hash_table_main, entry->key,
+                                  custom_cleanup_ttl);
             }
             entry = temp;
         }
@@ -275,14 +280,53 @@ void hash_table_cleanup_expired(hash_table_t *ht) {
     log_info("CleanUp Ended\n");
 }
 
+void create_ttl_manager() {
+    ttl_manager = malloc(sizeof(ttl_manager_t));
+    if (!ttl_manager) {
+        log_error("failed to allocate memory: %s for ttl manager",
+                  strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    ttl_manager->hash_table_main = hash_table_create(HASH_TABLE_STARTING_SIZE);
+}
+
+void create_lru_manager() {
+    lru_manager = malloc(sizeof(lru_manager_t));
+    if (!lru_manager) {
+        log_error("failed to allocate memory: %s for lru manager",
+                  strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    lru_manager->hash_table_main = hash_table_create(HASH_TABLE_STARTING_SIZE);
+    lru_manager->head = NULL;
+    lru_manager->tail = NULL;
+    lru_manager->size = 0;
+    lru_manager->capacity = LRU_CAPACITY;
+}
+
+void init_eviction_mode() {
+    if (EVICTION == EVICTION_TTL) {
+        log_debug("In EVICTION_TTL mode\n");
+        create_ttl_manager();
+
+    } else if (EVICTION == EVICTION_LRU) {
+        log_debug("In EVICTION_LRU mode\n");
+        create_ttl_manager();
+
+    } else {
+        log_error("UNKNOWN EVICTION POLICY mode\n");
+    }
+}
+
 int run_server(int port) {
     // #warning "TESTING macro is defined"
     CONNECTIONS_STORE(active_connections, CONNECTIONS_INIT);
     KEEP_RUNNING_STORE(keep_running, KEEP_RUNNING_INIT);
     // keep_running = 1;
     set_server_state(SERVER_STATE_INITIALIZING);
-    // Create hashtable
-    hash_table_main = hash_table_create(HASH_TABLE_STARTING_SIZE);
+    // hash_table_main = hash_table_create(HASH_TABLE_STARTING_SIZE);
+    init_eviction_mode();
+
     //  Set up signal handling
     setup_signal_handling();
     int server_fd = setup_server_socket(port);
@@ -327,8 +371,9 @@ int run_server(int port) {
     close(epoll_fd);
     close(server_fd);
     close(timer_fd);
-    hash_table_cleanup(hash_table_main, custom_cleanup);
+    hash_table_cleanup(ttl_manager->hash_table_main, custom_cleanup_ttl);
     CONNECTIONS_STORE(active_connections, CONNECTIONS_INIT);
+    free(ttl_manager);
     // active_connections = CONNECTIONS_INIT;
     log_info("SERVER STOPPED\n");
     return 0;

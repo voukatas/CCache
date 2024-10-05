@@ -59,5 +59,5 @@ clean:
 	rm -rf $(BUILD_TARGET)/
 	rm -rf test/coverage.info test/out/ test_app.c.gcov
 	rm test/mock_malloc.gcda test/mock_malloc.gcno test/test_app.gcda test/test_app.gcno unity/unity.gcda unity/unity.gcno
-	rm -rf main.c.gcov server.c.gcov src/connection.gcda src/connection.gcno src/coverage.info src/hashtable.gcda src/hashtable.gcno src/main.gcda src/main.gcno src/out/ src/server.gcda src/server.gcno src/signal_handler.gcda src/signal_handler.gcno src/logger.gcno src/logger.gcda src/ttl_manager.gcno src/ttl_manager.gcda test/test_ttl_cache.gcno test/test_ttl_cache.gcda test/test_lru_cache.gcno test/test_lru_cache.gcda test/util.gcno test/util.gcda
+	rm -rf main.c.gcov server.c.gcov src/connection.gcda src/connection.gcno src/coverage.info src/hashtable.gcda src/hashtable.gcno src/main.gcda src/main.gcno src/out/ src/server.gcda src/server.gcno src/signal_handler.gcda src/signal_handler.gcno src/logger.gcno src/logger.gcda src/ttl_manager.gcno src/ttl_manager.gcda test/test_ttl_cache.gcno test/test_ttl_cache.gcda test/test_lru_cache.gcno test/test_lru_cache.gcda test/util.gcno test/util.gcda src/lru_manager.gcno src/lru_manager.gcda
 

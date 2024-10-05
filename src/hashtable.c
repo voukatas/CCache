@@ -1,4 +1,4 @@
-#include <pthread.h>
+// #include <pthread.h>
 #include <string.h>
 #ifdef TESTING
 // #warning "TESTING macro is defined"
@@ -120,6 +120,8 @@ int hash_table_set(hash_table_t *ht, char *key, void *value, size_t size,
     ht->size++;
     // printf("---increase size: %d\n", ht->size);
 
+    // consider returning the value, in our case it will be lru_entry_t*
+    // return entry->value;
     return 0;
 }
 

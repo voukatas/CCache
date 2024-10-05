@@ -87,6 +87,11 @@
  */
 #define HASH_TABLE_STARTING_SIZE 1000
 
+/*
+ * The maximum capacity an LRU can store
+ * */
+#define LRU_CAPACITY 10000
+
 // ======================= Testing Configuration =======================
 #ifdef TESTING
     /**

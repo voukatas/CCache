@@ -16,9 +16,12 @@ static void connections_cmd(char *response) {
     write_response_int(response, get_active_connections());
 }
 
-static void keys_num_cmd(char *response) {
-    write_response_int(response, hash_table_main->size);
+static void keys_num_ttl_cmd(char *response) {
+    write_response_int(response, ttl_manager->hash_table_main->size);
 }
+// static void keys_num_lru_cmd(char *response) {
+//     write_response_int(response, lru_manager->hash_table_main->size);
+// }
 // Remove client from the linked list
 void remove_client_from_list(node_data_t *client_data) {
     if (client_data && client_data->data.client) {
@@ -90,7 +93,7 @@ static void process_command_for_ttl(char *command, char *response) {
         connections_cmd(response);
 
     } else if (strncmp(command_type, "KEYS_NUM", 8) == 0 && num_args == 1) {
-        keys_num_cmd(response);
+        keys_num_ttl_cmd(response);
 
     } else {
         // Unknown command

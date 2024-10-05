@@ -32,6 +32,6 @@ typedef struct {
 } node_data_t;
 
 
-extern hash_table_t *hash_table_main;
+//extern hash_table_t *hash_table_main;
 
 #endif // COMMON_H
