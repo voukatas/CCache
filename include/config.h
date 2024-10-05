@@ -123,6 +123,9 @@
     #undef LOG_LEVEL
     #define LOG_LEVEL LOG_LEVEL_DEBUG
 
+    #undef LRU_CAPACITY
+    #define LRU_CAPACITY 5
+
 #endif
 
 #endif // CONFIG_H

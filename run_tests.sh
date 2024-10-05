@@ -17,7 +17,7 @@ run_tests() {
     fi
     
     echo "Running Valgrind Memory Leak Check..."
-    if ! valgrind --leak-check=full --track-origins=yes -s ./test_app &> $output_file_memory; then
+    if ! valgrind --leak-check=full --track-origins=yes -s --show-leak-kinds=all --show-reachable=yes ./test_app &> $output_file_memory; then
         echo "Valgrind Memory Check failed for policy: $policy"
         exit 1
     fi

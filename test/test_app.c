@@ -22,7 +22,7 @@ int main(void) {
 #ifdef EVICTION_FLAG_TTL
     RUN_TEST(test_run_server_initialization);
     RUN_TEST(test_run_server_multiple_clients);
-    RUN_TEST(test_cache_api);
+    RUN_TEST(test_ttl_cache_api);
     RUN_TEST(test_cache_api_error_command_too_large);
     RUN_TEST(test_cache_api_error_command_incomplete);
     RUN_TEST(test_passive_ttl_cache);
@@ -33,6 +33,8 @@ int main(void) {
 #endif
 #ifdef EVICTION_FLAG_LRU
     RUN_TEST(test_lru_cache_set);
+    RUN_TEST(test_run_server_multiple_clients_lru_cache);
+    RUN_TEST(test_lru_cache_api);
 #endif
 
     return UNITY_END();

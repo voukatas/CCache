@@ -135,32 +135,34 @@ static int setup_epoll(int server_fd, int tfd) {
         exit(EXIT_FAILURE);
     }
 
-    // Add timer_fd to epoll
-    struct epoll_event tev;
-    tev.events = EPOLLIN;
-    timer_event = malloc(sizeof(node_data_t));
-    if (!timer_event) {
-        perror("malloc failed");
-        close(server_fd);
-        close(timer_fd);
-        close(epoll_fd);
-        free(server_event);
-        server_event = NULL;
-        timer_event = NULL;
-        exit(EXIT_FAILURE);
-    }
-    timer_event->event_type = EVENT_TIMER;
-    timer_event->data.fd = tfd;
-    // The data.fd and data.ptr is union....
-    // tev.data.fd = tfd;
-    tev.data.ptr = timer_event;
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, tfd, &tev) == -1) {
-        perror("Epoll ctl add failed");
-        close(server_fd);
-        close(epoll_fd);
-        free(server_event);
-        server_event = NULL;
-        exit(EXIT_FAILURE);
+    if (EVICTION == EVICTION_TTL) {
+        // Add timer_fd to epoll
+        struct epoll_event tev;
+        tev.events = EPOLLIN;
+        timer_event = malloc(sizeof(node_data_t));
+        if (!timer_event) {
+            perror("malloc failed");
+            close(server_fd);
+            close(timer_fd);
+            close(epoll_fd);
+            free(server_event);
+            server_event = NULL;
+            timer_event = NULL;
+            exit(EXIT_FAILURE);
+        }
+        timer_event->event_type = EVENT_TIMER;
+        timer_event->data.fd = tfd;
+        // The data.fd and data.ptr is union....
+        // tev.data.fd = tfd;
+        tev.data.ptr = timer_event;
+        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, tfd, &tev) == -1) {
+            perror("Epoll ctl add failed");
+            close(server_fd);
+            close(epoll_fd);
+            free(server_event);
+            server_event = NULL;
+            exit(EXIT_FAILURE);
+        }
     }
 
     return epoll_fd;
@@ -280,7 +282,7 @@ void hash_table_cleanup_expired(hash_table_t *ht) {
     log_info("CleanUp Ended\n");
 }
 
-void create_ttl_manager() {
+void create_ttl_manager(void) {
     ttl_manager = malloc(sizeof(ttl_manager_t));
     if (!ttl_manager) {
         log_error("failed to allocate memory: %s for ttl manager",
@@ -290,7 +292,7 @@ void create_ttl_manager() {
     ttl_manager->hash_table_main = hash_table_create(HASH_TABLE_STARTING_SIZE);
 }
 
-void create_lru_manager() {
+void create_lru_manager(void) {
     lru_manager = malloc(sizeof(lru_manager_t));
     if (!lru_manager) {
         log_error("failed to allocate memory: %s for lru manager",
@@ -311,7 +313,7 @@ void init_eviction_mode() {
 
     } else if (EVICTION == EVICTION_LRU) {
         log_debug("In EVICTION_LRU mode\n");
-        create_ttl_manager();
+        create_lru_manager();
 
     } else {
         log_error("UNKNOWN EVICTION POLICY mode\n");
@@ -371,9 +373,14 @@ int run_server(int port) {
     close(epoll_fd);
     close(server_fd);
     close(timer_fd);
-    hash_table_cleanup(ttl_manager->hash_table_main, custom_cleanup_ttl);
+    if (EVICTION == EVICTION_TTL) {
+        hash_table_cleanup(ttl_manager->hash_table_main, custom_cleanup_ttl);
+        free(ttl_manager);
+    } else if (EVICTION == EVICTION_LRU) {
+        hash_table_cleanup(lru_manager->hash_table_main, custom_cleanup_lru);
+        free(lru_manager);
+    }
     CONNECTIONS_STORE(active_connections, CONNECTIONS_INIT);
-    free(ttl_manager);
     // active_connections = CONNECTIONS_INIT;
     log_info("SERVER STOPPED\n");
     return 0;

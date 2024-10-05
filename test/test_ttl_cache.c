@@ -28,7 +28,7 @@ void test_run_server_multiple_clients(void) {
     disconnect_client(sockfd1);
 }
 
-void test_cache_api(void) {
+void test_ttl_cache_api(void) {
     char buffer[BUFFER_SIZE];
 
     // Test scenario

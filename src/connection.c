@@ -19,9 +19,9 @@ static void connections_cmd(char *response) {
 static void keys_num_ttl_cmd(char *response) {
     write_response_int(response, ttl_manager->hash_table_main->size);
 }
-// static void keys_num_lru_cmd(char *response) {
-//     write_response_int(response, lru_manager->hash_table_main->size);
-// }
+static void keys_num_lru_cmd(char *response) {
+    write_response_int(response, lru_manager->hash_table_main->size);
+}
 // Remove client from the linked list
 void remove_client_from_list(node_data_t *client_data) {
     if (client_data && client_data->data.client) {
@@ -65,6 +65,38 @@ static void set_error_msg(int epoll_fd, client_t *client,
     } else {
         fprintf(stderr, "Write buffer overflow\n");
         delete_resources(epoll_fd, client, ev);
+    }
+}
+
+static void process_command_for_lru(char *command, char *response) {
+    char command_type[20] = {0};
+    char key[BUFFER_SIZE] = {0};
+    char value[BUFFER_SIZE] = {0};
+
+    int num_args = sscanf(command, "%s %s %s", command_type, key, value);
+
+    log_debug("Command arguments num: %ld", num_args);
+    log_debug("command_type: %.3s", command_type);
+
+    if (strncmp(command_type, "SET", 3) == 0 && num_args == 3) {
+        lru_set(key, value, response);
+
+    } else if (strncmp(command_type, "GET", 3) == 0 && num_args == 2) {
+        lru_get(key, response);
+
+    } else if (strncmp(command_type, "DELETE", 6) == 0 && num_args == 2) {
+        lru_delete(key, response);
+
+    } else if (strncmp(command_type, "CONNECTIONS", 11) == 0 && num_args == 1) {
+        connections_cmd(response);
+
+    } else if (strncmp(command_type, "KEYS_NUM", 8) == 0 && num_args == 1) {
+        keys_num_lru_cmd(response);
+
+    } else {
+        // Unknown command
+        char *response_value = "ERROR: UNKNOWN OR MALFORMED COMMAND";
+        write_response_str(response, response_value);
     }
 }
 
@@ -125,13 +157,7 @@ static void process_command(char *command, char *response) {
 
     } else if (EVICTION == EVICTION_LRU) {
         log_debug("In EVICTION_LRU mode\n");
-        /*
-         *
-         * Needs to be replaced for LRU mode
-         *
-         *
-         * */
-        process_command_for_ttl(command, response);
+        process_command_for_lru(command, response);
     } else {
         log_error("UNKNOWN EVICTION POLICY mode\n");
     }

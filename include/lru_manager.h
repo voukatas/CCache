@@ -23,6 +23,8 @@ typedef struct lru_manager {
 
 void custom_cleanup_lru(void *arg);
 void lru_set(char *key, char *value, char *response);
+void lru_get(char *key, char *response);
+void lru_delete(char *key, char *response);
 
 extern lru_manager_t* lru_manager;
 
