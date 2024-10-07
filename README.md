@@ -5,7 +5,7 @@ A single-threaded event-driven cache
 ## Features
 - Event-driven, single-threaded
 - Uses a text-based protocol
-- For resource management, it uses a Time-To-Live (TTL) value
+- For resource management there are two options, either build with a Time-To-Live (TTL) or Least Recently Used (LRU)
 
 ### Project Origin
 
@@ -24,10 +24,13 @@ The cache is configured using the `config.h` file. The following are the current
 
 ## How to run
 ```bash
-make
-# For production
+# For building with an LRU cache
+make EVICTION_POLICY=LRU
+# or this for building with an TTL cache
+make EVICTION_POLICY=TTL
+# For production execute this
 ./ccache_prod
-# With debug symbols
+# For debugging With debug symbols
 ./ccache_dbg
 # To check for memory leaks
 valgrind --leak-check=full --track-origins=yes -s ./ccache_dbg
@@ -41,10 +44,8 @@ valgrind --leak-check=full --track-origins=yes -s ./test_app
 # All in one
 # For LRU
 make clean && make EVICTION_POLICY=LRU && valgrind --leak-check=full --track-origins=yes -s ./test_app && valgrind --tool=helgrind ./test_app
-make clean && make EVICTION_POLICY=LRU && valgrind --leak-check=full --track-origins=yes -s ./test_app && valgrind --tool=helgrind ./ccache_dbg
 # or for TTL
 make clean && make EVICTION_POLICY=TTL && valgrind --leak-check=full --track-origins=yes -s ./test_app && valgrind --tool=helgrind ./test_app
-make clean && make EVICTION_POLICY=TTL && valgrind --leak-check=full --track-origins=yes -s ./test_app && valgrind --tool=helgrind ./ccache_dbg
 
 ```
 ## Check the Code Coverage
@@ -70,6 +71,8 @@ echo -ne "SET key_test value_test 30\r\n" | nc localhost 8080
 
 ## API Usage
 CCache is a text-based protocol key-value store that supports basic operations like SET, GET, DELETE, and a few utility commands. Below is a description of the commands supported by the cache and how to use them:
+
+**NOTE: USE THE <TTL> ONLY IF YOU SET IT UP IN TTL MODE, FOR LRU MODE OMIT THIS FIELD**
 
 1. SET Command
 - Usage: SET <key> <value> <TTL>

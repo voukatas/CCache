@@ -1,8 +1,14 @@
 #include "../include/lru_manager.h"
 
+#include <string.h>
+
 // #include "../include/config.h"
 #include "../include/logger.h"
 #include "../include/response.h"
+
+// start private functions
+// static void print_lru_queue(void);
+// end private functions
 
 void custom_cleanup_lru(void *arg) {
     lru_entry_t *lru_entry = arg;
@@ -118,9 +124,10 @@ void lru_set(char *key, char *value, char *response) {
     // from the Q
     if (lru_manager->size >= lru_manager->capacity) {
         // remove it from the Q
-        remove_entry_from_q(lru_manager->tail);
+        lru_entry_t *to_be_removed = lru_manager->tail;
+        remove_entry_from_q(to_be_removed);
         // remove the last entry from hashtable
-        hash_table_remove(lru_manager->hash_table_main, lru_manager->tail->key,
+        hash_table_remove(lru_manager->hash_table_main, to_be_removed->key,
                           custom_cleanup_lru);
         lru_manager->size--;
     }
@@ -150,6 +157,9 @@ void lru_set(char *key, char *value, char *response) {
     add_entry_to_front_of_q(lru_entry_new);
     lru_manager->size++;
 
+    // hash_table_print_keys(lru_manager->hash_table_main);
+    // print_lru_queue();
+
     response_value = "OK";
     write_response_str(response, response_value);
 }
@@ -167,6 +177,11 @@ void lru_get(char *key, char *response) {
 
     response_value = lru_entry->value;
     move_entry_to_front_of_q(lru_entry);
+
+    // log_debug("lru capacity: %d", lru_manager->capacity);
+    // hash_table_print_keys(lru_manager->hash_table_main);
+    // print_lru_queue();
+
     write_response_str(response, response_value);
 }
 
@@ -183,5 +198,29 @@ void lru_delete(char *key, char *response) {
     hash_table_remove(lru_manager->hash_table_main, key, custom_cleanup_lru);
     lru_manager->size--;
     response_value = "OK";
+
+    // hash_table_print_keys(lru_manager->hash_table_main);
+    // print_lru_queue();
+
     write_response_str(response, response_value);
 }
+
+// static void print_lru_queue(void) {
+//     char keys[200] = {0};
+//     if (lru_manager == NULL) {
+//         log_debug("lru_manager is NULL");
+//         return;
+//     }
+//     lru_entry_t *current = lru_manager->head;
+//     while (current != NULL) {
+//         if (current->key) {
+//             log_debug("queue item: %s", current->key);
+//             strcat(keys, current->key);
+//         } else {
+//             log_debug("queue item has no key");
+//         }
+//         current = current->next;
+//     }
+//
+//     log_debug("%s\n", keys);
+// }

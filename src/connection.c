@@ -4,6 +4,9 @@
 #include <string.h>
 #include <time.h>
 
+// response_writer_t response_writer = write_response_str;
+// void set_response_writer(response_writer_t writer) { response_writer =
+// writer; }
 void increment_active_connections(void) {
     CONNECTIONS_INCREMENT(active_connections);
 }

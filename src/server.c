@@ -304,6 +304,9 @@ void create_lru_manager(void) {
     lru_manager->tail = NULL;
     lru_manager->size = 0;
     lru_manager->capacity = LRU_CAPACITY;
+    // disbale the resize functionality of the hashtable since the LRU needs to
+    // have constant size
+    hash_table_set_resize_flag(0);
 }
 
 void init_eviction_mode() {
@@ -314,6 +317,7 @@ void init_eviction_mode() {
     } else if (EVICTION == EVICTION_LRU) {
         log_debug("In EVICTION_LRU mode\n");
         create_lru_manager();
+        log_debug("LRU capacity: %d", LRU_CAPACITY);
 
     } else {
         log_error("UNKNOWN EVICTION POLICY mode\n");
@@ -328,6 +332,7 @@ int run_server(int port) {
     set_server_state(SERVER_STATE_INITIALIZING);
     // hash_table_main = hash_table_create(HASH_TABLE_STARTING_SIZE);
     init_eviction_mode();
+    log_debug("Hashtable starting size: %d", HASH_TABLE_STARTING_SIZE);
 
     //  Set up signal handling
     setup_signal_handling();
@@ -339,6 +344,7 @@ int run_server(int port) {
     log_info("Server is listening on port %d\n", port);
 
     set_server_state(SERVER_STATE_RUNNING);
+    // log_debug("lru capacity: %d", lru_manager->capacity);
 
     struct epoll_event events[MAX_EVENTS];
 

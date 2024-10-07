@@ -85,7 +85,7 @@
  *   If using LRU, a larger starting size like 10,000 is recommended.
  * Default: 1000 entries.
  */
-#define HASH_TABLE_STARTING_SIZE 1000
+#define HASH_TABLE_STARTING_SIZE 10000
 
 /*
  * The maximum capacity an LRU can store
@@ -113,18 +113,20 @@
     #undef CLEAN_UP_TIME
     #define CLEAN_UP_TIME 3
     
-    /**
-     * Initial size of the hash table for testing.
-     * Testing default: 1000 entries.
-     */
+    #ifdef EVICTION_FLAG_TTL
     #undef HASH_TABLE_STARTING_SIZE
     #define HASH_TABLE_STARTING_SIZE 1000
+    #endif
+
+    #ifdef EVICTION_FLAG_LRU
+    #undef HASH_TABLE_STARTING_SIZE
+    #define HASH_TABLE_STARTING_SIZE 5
+    #undef LRU_CAPACITY
+    #define LRU_CAPACITY 5
+    #endif
 
     #undef LOG_LEVEL
     #define LOG_LEVEL LOG_LEVEL_DEBUG
-
-    #undef LRU_CAPACITY
-    #define LRU_CAPACITY 5
 
 #endif
 

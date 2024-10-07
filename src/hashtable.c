@@ -212,6 +212,7 @@ int hash_table_resize(hash_table_t *ht) {
 // Keys
 void hash_table_print_keys(hash_table_t *ht) {
     printf("Keys:\n");
+    printf("capacity: %d\n", ht->capacity);
     for (int i = 0; i < ht->capacity; i++) {
         hash_entry_t *entry = ht->table[i];
         if (entry == NULL) {
